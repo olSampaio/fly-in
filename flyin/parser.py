@@ -177,4 +177,25 @@ class MapParser:
         Raises:
             ParseError: If the core is malformed.
         """
-        raise NotImplementedError
+
+        parts = core.split()
+        if len(parts) != 3:
+            raise ParseError(
+                f"Expected 'name x y', got '{core}'", line_number
+            )
+        name, x_text, y_text = parts
+        if "-" in name:
+            raise ParseError(f"Invalid name: '{name}', the name cannot "
+                             "contain '-'", line_number)
+        try:
+            x = int(x_text)
+        except ValueError:
+            raise ParseError(f"The value of x is not an int: '{x_text}'",
+                             line_number)
+        try:
+            y = int(y_text)
+        except ValueError:
+            raise ParseError(f"The value of y is not an int: '{y_text}'",
+                             line_number)
+
+        return (name, x, y)
