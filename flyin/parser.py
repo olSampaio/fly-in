@@ -253,9 +253,10 @@ class MapParser:
                 f"Expected 'name x y', got '{core}'", line_number
             )
         name, x_text, y_text = parts
-        if "-" in name:
+        if "-" in name or "[" in name or "]" in name:
             raise ParseError(f"Invalid name: '{name}', the name cannot "
-                             "contain '-'", line_number)
+                             "contain the characters '-', '[', ']'",
+                             line_number)
         x = self._to_int(x_text, "x", line_number)
         y = self._to_int(y_text, "y", line_number)
         return (name, x, y)
@@ -285,7 +286,13 @@ class MapParser:
                 f"The value of {field} is not an int: '{value}'",
                 line_number
             )
-        return int(value)
+        try:
+            return int(value)
+        except ValueError:
+            raise ParseError(
+                f"The value of {field} is not a valid integer.",
+                line_number
+            )
 
     def _parse_pairs(
         self, text: str, allowed: set[str], line_number: int
@@ -348,13 +355,16 @@ class MapParser:
             first, second = core.split("-")
         except ValueError:
             raise ParseError("The connection needs to be 'name1-name2', got "
-                             f"{rest}", line_number)
+                             f"'{core}'", line_number)
         if not first or not second:
             raise ParseError("The connection needs to be 'name1-name2', got "
-                             f"{rest}", line_number)
+                             f"'{core}'", line_number)
+        if first == second:
+            raise ParseError("A connection from a zone to itself is rejected. "
+                             f"'{core}'", line_number)
         if any(char.isspace() for char in first + second):
             raise ParseError(f"The connection cannot contain whitespace: "
-                             f"{rest}", line_number)
+                             f"'{core}'", line_number)
         pairs = self._parse_pairs(
             metadata, {"max_link_capacity"}, line_number
         )
@@ -363,11 +373,11 @@ class MapParser:
             capacity = self._to_int(
                 pairs["max_link_capacity"], "max_link_capacity", line_number
             )
-        if capacity <= 0:
-            raise ParseError(
-                f"max_link_capacity must be positive, got {capacity}",
-                line_number
-            )
+            if capacity <= 0:
+                raise ParseError(
+                    f"max_link_capacity must be positive, got {capacity}",
+                    line_number
+                )
         conn = Connection(first, second, capacity)
         try:
             network.add_connection(conn)
