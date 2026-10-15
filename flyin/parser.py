@@ -1,5 +1,6 @@
 """Parser for Fly-in map files."""
 
+from flyin.connection import Connection
 from flyin.errors import ParseError
 from flyin.network import Network
 from flyin.zone import Zone, ZoneType
@@ -32,7 +33,7 @@ class MapParser:
             if prefix in ("start_hub", "end_hub", "hub"):
                 self._parse_zone(network, prefix, rest, line_number)
             elif prefix == "connection":
-                pass                        # etapa seguinte
+                self._parse_connection(network, rest, line_number)
             else:
                 raise ParseError(f"Unknown line type. Expected: 'start_hub', "
                                  f"'end_hub', 'hub', 'connection'. Got "
@@ -216,6 +217,10 @@ class MapParser:
 
         core, bracket, tail = text.partition("[")
         if bracket == "":
+            if "]" in core:
+                raise ParseError(
+                    "Unexpected closing bracket.", line_number
+                )
             return core.strip(), ""
         if not tail.endswith("]"):
             raise ParseError(f"Invalid metadata syntax: '{text}'", line_number)
@@ -323,3 +328,48 @@ class MapParser:
                 raise ParseError(f"Duplicate key '{key}'", line_number)
             result[key] = value
         return result
+
+    def _parse_connection(
+        self, network: Network, rest: str, line_number: int
+    ) -> None:
+        """Parse a connection line and add it to the network.
+
+        Args:
+            network: The network being built.
+            rest: The text after the colon.
+            line_number: The line number in the map file.
+
+        Raises:
+            ParseError: If the line is malformed.
+        """
+
+        core, metadata = self._split_metadata(rest, line_number)
+        try:
+            first, second = core.split("-")
+        except ValueError:
+            raise ParseError("The connection needs to be 'name1-name2', got "
+                             f"{rest}", line_number)
+        if not first or not second:
+            raise ParseError("The connection needs to be 'name1-name2', got "
+                             f"{rest}", line_number)
+        if any(char.isspace() for char in first + second):
+            raise ParseError(f"The connection cannot contain whitespace: "
+                             f"{rest}", line_number)
+        pairs = self._parse_pairs(
+            metadata, {"max_link_capacity"}, line_number
+        )
+        capacity = 1
+        if "max_link_capacity" in pairs:
+            capacity = self._to_int(
+                pairs["max_link_capacity"], "max_link_capacity", line_number
+            )
+        if capacity <= 0:
+            raise ParseError(
+                f"max_link_capacity must be positive, got {capacity}",
+                line_number
+            )
+        conn = Connection(first, second, capacity)
+        try:
+            network.add_connection(conn)
+        except ValueError as error:
+            raise ParseError(str(error), line_number)
