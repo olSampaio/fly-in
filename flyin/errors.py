@@ -11,3 +11,7 @@ class ParseError(Exception):
         else:
             full_message = self.message
         super().__init__(full_message)
+
+
+class UnsolvableError(Exception):
+    """Raised when the map is valid but has no path to the end zone."""
