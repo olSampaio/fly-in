@@ -89,3 +89,21 @@ class Pathfinder:
     def plan_for_one_drone(self) -> Plan:
         """Return the plan of a single drone along the cheapest path."""
         return Plan([self.to_states(self.shortest_path())])
+
+    def plan_sequential(self) -> Plan:
+        """Return a plan where the drones fly one after another.
+
+        Every drone follows the cheapest path and leaves the start zone
+        only after the previous drone has arrived. The plan is valid on
+        any solvable map, but slow: it is only a baseline.
+
+        Returns:
+            The plan for all the drones of the network.
+        """
+        states = self.to_states(self.shortest_path())
+        duration = len(states) - 1
+        paths = [
+            [states[0]] * (drone * duration) + states
+            for drone in range(self.network.nb_drones)
+        ]
+        return Plan(paths)
