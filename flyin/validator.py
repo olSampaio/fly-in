@@ -25,16 +25,13 @@ class Validator:
         self.end = network.end
 
     def validate(self, plan: Plan) -> list[str]:
-        """Check a plan.
-
-        Args:
-            plan: The plan to check.
-
-        Returns:
-            The list of violations. An empty list means a valid plan.
-        """
+        """Check a plan and return all detected violations."""
         errors: list[str] = []
         self._check_endpoints(plan, errors)
+
+        if not plan.paths or any(not path for path in plan.paths):
+            return errors
+
         self._check_moves(plan, errors)
         self._check_capacity(plan, errors)
         return errors
@@ -46,12 +43,18 @@ class Validator:
                 f"Plan has {len(plan.paths)} drones, "
                 f"expected {self.network.nb_drones}"
             )
+
         for drone, path in enumerate(plan.paths):
+            if not path:
+                errors.append(f"D{drone + 1} has an empty path")
+                continue
+
             if path[0] != self.start.name:
                 errors.append(
                     f"D{drone + 1} starts at '{path[0]}', "
                     f"expected '{self.start.name}'"
                 )
+
             if path[-1] != self.end.name:
                 errors.append(
                     f"D{drone + 1} ends at '{path[-1]}', "
@@ -103,6 +106,10 @@ class Validator:
             errors.append(f"{where} moves to unknown state '{cur}'")
         elif prev not in (conn.zone_a, conn.zone_b):
             errors.append(f"{where} enters '{cur}' from '{prev}'")
+        elif cur != f"{prev}-{conn.other(prev)}":
+            errors.append(
+                f"{where} uses a connection name in the wrong direction"
+            )
         elif zones[conn.other(prev)].zone_type is not ZoneType.RESTRICTED:
             errors.append(
                 f"{where} is in flight toward a zone that is not restricted"

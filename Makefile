@@ -1,5 +1,5 @@
 PYTHON ?= python3
-MAP ?= maps/easy/01_linear_path.txt
+MAP ?=
 
 .PHONY: install run debug clean lint lint-strict
 
@@ -7,10 +7,18 @@ install:
 	$(PYTHON) -m pip install -r requirements.txt
 
 run:
-	$(PYTHON) main.py $(MAP)
+	@if [ -z "$(MAP)" ]; then \
+		echo "Usage: make run MAP=<map_file>"; \
+		exit 1; \
+	fi
+	$(PYTHON) main.py "$(MAP)"
 
 debug:
-	$(PYTHON) -m pdb main.py $(MAP)
+	@if [ -z "$(MAP)" ]; then \
+		echo "Usage: make debug MAP=<map_file>"; \
+		exit 1; \
+	fi
+	$(PYTHON) -m pdb main.py "$(MAP)"
 
 clean:
 	find . -type d \( -name .git -o -name .venv -o -name venv \) -prune -o -type d \( -name __pycache__ -o -name .mypy_cache -o -name .pytest_cache \) -exec rm -rf {} +

@@ -1,9 +1,18 @@
+"""Storage and adjacency queries for a drone routing network."""
+
 from flyin.connection import Connection
 from flyin.zone import Zone
 
 
 class Network:
+    """Hold the zones, connections, and start/end hubs of a map."""
+
     def __init__(self, nb_drones: int) -> None:
+        """Create an empty network for the requested number of drones.
+
+        Args:
+            nb_drones: Number of drones to route through the network.
+        """
         self.nb_drones = nb_drones
         self.zones: dict[str, Zone] = {}
         self.connections: dict[frozenset[str], Connection] = {}
@@ -12,6 +21,14 @@ class Network:
         self.end: Zone | None = None
 
     def add_zone(self, zone: Zone) -> None:
+        """Register a zone and initialize its adjacency list.
+
+        Args:
+            zone: The zone to insert.
+
+        Raises:
+            ValueError: If its name is already registered.
+        """
         if zone.name in self.zones:
             raise ValueError(f"Duplicated zone name: {zone.name}")
         self.zones[zone.name] = zone
@@ -22,6 +39,14 @@ class Network:
             self.end = zone
 
     def add_connection(self, conn: Connection) -> None:
+        """Add an undirected connection between two existing zones.
+
+        Args:
+            conn: The connection to register.
+
+        Raises:
+            ValueError: If an endpoint is unknown or the link is duplicate.
+        """
         for name in (conn.zone_a, conn.zone_b):
             if name not in self.zones:
                 raise ValueError(f"Unknown name: {name}")
@@ -32,6 +57,17 @@ class Network:
         self._adjacency[conn.zone_b].append(conn)
 
     def neighbours(self, name: str) -> list[Zone]:
+        """Return passable zones directly connected to the given zone.
+
+        Args:
+            name: Name of a zone already registered in the network.
+
+        Returns:
+            Adjacent zones, excluding those marked as blocked.
+
+        Raises:
+            KeyError: If the requested zone is not in the network.
+        """
         result: list[Zone] = []
         for conn in self._adjacency[name]:
             zone = self.zones[conn.other(name)]
