@@ -5,6 +5,7 @@ import sys
 from flyin.colors import Palette
 from flyin.network import Network
 from flyin.simulation import Move, Simulation
+from flyin.reservations import ReservationTable
 
 
 class TerminalRenderer:
@@ -27,6 +28,8 @@ class TerminalRenderer:
             simulation: The simulation to show.
         """
         turns = simulation.turns()
+        table = ReservationTable(self.network)
+        for path in 
         for turn in turns:
             print(" ".join(self._paint(move) for move in turn.moves))
         sys.stdout.flush()

@@ -45,6 +45,12 @@ class ReservationTable:
         used = self._link_load.get((conn.key, turn), 0)
         return used < conn.max_link_capacity
 
+    def zone_usage(self, zone: Zone, turn: int) -> int:
+        return self._zone_load.get((zone.name, turn), 0)
+
+    def link_usage(self, conn: Connection, turn: int) -> int:
+        return self._link_load.get((conn.key, turn), 0)
+
     def reserve(self, states: list[str]) -> None:
         """Reserve everything a drone uses along its path.
 
